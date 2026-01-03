@@ -1,21 +1,32 @@
 #include <stdio.h>
-#include <unistd.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
-void run(char* cmds[]){
+void watch_init(const char *file);
+void watch_once();
+
+void run(char *cmds[]) {
     pid_t pid = fork();
     if (pid == 0) {
         execvp(cmds[0], &cmds[0]);
+        perror("execvp");
+        _exit(127);
     }
-    waitpid(pid, NULL, 0);
+    if (pid > 0) {
+        int status;
+        waitpid(pid, &status, 0);
+    }
 }
 
 void watch_and_run(const char *dir, char *cmds[]) {
     printf("watching in : %s\n", dir);
-    printf("running: %s\n\n", cmds[0]);
-    
-    run(cmds);
-    printf("OK\n");
+    watch_init(dir);
+
+    while (1) {
+        watch_once();
+        printf("running: %s\n\n", cmds[0]);
+        run(cmds);
+    }
 }
 
 void print_help() {
