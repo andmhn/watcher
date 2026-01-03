@@ -25,13 +25,7 @@ void run(char *cmds[]) {
 void watch_and_run(const char *dir, char *cmds[]) {
     watch_init(dir);
 
-    terminal_setup();
-    clr_scr();
-    printf("watching in : %s\n", dir);
-
     while (1) {
-        watch_once();
-
         clr_scr();
         printf("watching in : %s\n", dir);
         printf("running: %s\n\n", cmds[0]);
@@ -39,6 +33,7 @@ void watch_and_run(const char *dir, char *cmds[]) {
         run(cmds);
 
         fflush(stdout);
+        watch_once();
     }
 }
 
@@ -63,6 +58,7 @@ int main(int argc, char *argv[]) {
 
     char *dir = argv[1];
 
+    terminal_setup();
     signal(SIGINT, handle_exit);
     signal(SIGTERM, handle_exit);
 
