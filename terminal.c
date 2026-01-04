@@ -3,7 +3,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-struct termios orig_termios;
+static struct termios orig_termios;
 
 void clr_scr() { printf("\033[2J\033[H"); }
 
