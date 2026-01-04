@@ -2,7 +2,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-void watch_init(const char *file);
+void watch_init(const char *dir);
 void watch_once();
 void watch_close();
 
@@ -25,8 +25,9 @@ void run(char *cmds[]) {
 
 void watch_and_run(const char *dir, char *cmds[]) {
     while (1) {
-        watch_init(dir);
         clr_scr();
+        watch_init(dir);
+
         printf("watching in : %s\n", dir);
         printf("running: %s\n\n", cmds[0]);
 
