@@ -2,13 +2,18 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-void watch_init(const char *dir);
-void watch_once();
-void watch_close();
+#include "watch.h"
 
 void clr_scr();
 void terminal_setup();
 void terminal_restore();
+void handle_exit(int sig);
+
+typedef struct {
+    char *dir;
+    char **cmds;
+    size_t n_cmd;
+} Context;
 
 void run(char *cmds[]) {
     pid_t pid = fork();
@@ -23,21 +28,55 @@ void run(char *cmds[]) {
     }
 }
 
-void watch_and_run(const char *dir, char *cmds[], size_t cmds_len) {
+void handle_file_update(Context *ctx) {
+    clr_scr();
+
+    printf("watching in  %s\n", ctx->dir);
+    printf("running: ");
+    for (size_t i = 0; i < ctx->n_cmd; i++)
+        printf("%s ", ctx->cmds[i]);
+    printf("\n\n");
+
+    run(ctx->cmds);
+    fflush(stdout);
+}
+
+void handle_console_input(Context *ctx) {
+    char buf;
+    if (read(STDIN_FILENO, &buf, 1) > 0) {
+        switch (buf) {
+
+        case 'q':
+            handle_exit(0);
+            break;
+
+        case 'r':
+            handle_file_update(ctx);
+            break;
+        }
+    }
+}
+
+void event_handler(enum Event events[], int nevents, void *ctx) {
+    for (int i = 0; i < nevents; i++) {
+        switch (events[i]) {
+        case Console_Input: {
+            handle_console_input(ctx);
+            break;
+        }
+        case File_Update: {
+            handle_file_update(ctx);
+            break;
+        }
+        }
+    }
+}
+
+void watch_and_run(Context ctx) {
+    handle_file_update(&ctx); // initial run
     while (1) {
-        clr_scr();
-        watch_init(dir);
-
-        printf("watching in  %s\n", dir);
-        printf("running: ");
-        for (size_t i = 0; i < cmds_len; i++)
-            printf("%s ", cmds[i]);
-        printf("\n\n");
-
-        run(cmds);
-
-        fflush(stdout);
-        watch_once();
+        watch_init(ctx.dir);
+        watch_once(event_handler, &ctx);
         watch_close();
     }
 }
@@ -51,7 +90,7 @@ void handle_exit(int sig) {
     (void)sig;
     terminal_restore();
     fflush(stdout);
-    _exit(-1);
+    _exit(sig);
 }
 
 int main(int argc, char *argv[]) {
@@ -67,5 +106,11 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, handle_exit);
     signal(SIGTERM, handle_exit);
 
-    watch_and_run(dir, &argv[2], argc - 2);
+    Context ctx = {
+        .dir = dir,
+        .cmds = &argv[2],
+        .n_cmd = argc - 2,
+    };
+
+    watch_and_run(ctx);
 }

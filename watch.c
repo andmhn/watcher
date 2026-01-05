@@ -8,11 +8,14 @@
 #include <sys/inotify.h>
 #include <unistd.h>
 
+#include "watch.h"
+
+static struct pollfd fds[2] = {0};
 static int fd = 0;
 static char buf[BUFSIZ] __attribute__((aligned(__alignof__(struct inotify_event))));
 
 static const int debounce_ms = 100;
-static const uint32_t imask  = IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVED_TO;
+static const uint32_t imask = IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVED_TO;
 
 static void add_subdirs(const char *root_path);
 
@@ -31,32 +34,60 @@ void watch_init(const char *dir) {
         exit(EXIT_FAILURE);
     }
     add_subdirs(dir);
+
+    /* Prepare for polling. */
+
+    fds[0].fd = STDIN_FILENO; /* Console input */
+    fds[0].events = POLLIN;
+
+    fds[1].fd = fd; /* Inotify input */
+    fds[1].events = POLLIN;
 }
 
-void watch_once() {
-    struct pollfd pfd = {.fd = fd, .events = POLLIN};
+void watch_once(EventHandler event_callback, void *userdata) {
+    size_t n_events = 0;
+    enum Event events[2];
 
-    ssize_t len = read(fd, buf, sizeof buf);
-    if (len <= 0)
-        return;
+    //--------------------------  POLL  ---------------------
+    const int n_fds = 2;
+    int poll_num = poll(fds, n_fds, -1);
+    if (poll_num == -1) {
+        if (errno == EINTR)
+            return;
+        perror("poll");
+        exit(EXIT_FAILURE);
+    }
 
-    puts(buf);
-    fflush(stdout);
-    while (poll(&pfd, 1, debounce_ms) > 0) {
-        // Drain the buffer
-        len = read(fd, buf, sizeof buf);
-        if (len <= 0 && errno != EAGAIN) {
-            break;
+    //--------------------------  READ EVENTS ----------------
+    if (poll_num > 0) {
+
+        if (fds[0].revents & POLLIN) {
+            events[n_events++] = Console_Input;
+        }
+
+        if (fds[1].revents & POLLIN) {
+
+            while (poll(&fds[1], 1, debounce_ms) > 0) {
+                // Let it drain
+                size_t len = read(fd, buf, sizeof(buf));
+
+                if (len <= 0 && errno != EAGAIN)
+                    break;
+            }
+            events[n_events++] = File_Update;
         }
     }
+
+    if (n_events > 0)
+        event_callback(events, n_events, userdata);
 }
 
 void watch_close() { close(fd); }
 
 static int crawl_callback(const char *fpath, const struct stat *sb, int typeflag,
                           struct FTW *ftwbuf) {
-    (void) ftwbuf;
-    (void) sb;
+    (void)ftwbuf;
+    (void)sb;
     if (typeflag == FTW_D) {
         int wd = inotify_add_watch(fd, fpath, imask);
         if (wd == -1) {
@@ -71,4 +102,3 @@ static void add_subdirs(const char *root_path) {
     const int depth = 20;
     nftw(root_path, crawl_callback, depth, FTW_PHYS);
 }
-
