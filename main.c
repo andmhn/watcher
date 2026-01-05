@@ -23,13 +23,16 @@ void run(char *cmds[]) {
     }
 }
 
-void watch_and_run(const char *dir, char *cmds[]) {
+void watch_and_run(const char *dir, char *cmds[], size_t cmds_len) {
     while (1) {
         clr_scr();
         watch_init(dir);
 
-        printf("watching in : %s\n", dir);
-        printf("running: %s\n\n", cmds[0]);
+        printf("watching in  %s\n", dir);
+        printf("running: ");
+        for (size_t i = 0; i < cmds_len; i++)
+            printf("%s ", cmds[i]);
+        printf("\n\n");
 
         run(cmds);
 
@@ -40,8 +43,8 @@ void watch_and_run(const char *dir, char *cmds[]) {
 }
 
 void print_help() {
-    puts("USAGE:\twatcher <dir> <cmd...>\n\n");
-    puts("\tWatch for file changes in directory and run comand");
+    puts("\nUSAGE:\twatcher <dir> <cmds...>\n\n");
+    puts("\tWatch for file changes in directory and run comand\n");
 }
 
 void handle_exit(int sig) {
@@ -64,5 +67,5 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, handle_exit);
     signal(SIGTERM, handle_exit);
 
-    watch_and_run(dir, &argv[2]);
+    watch_and_run(dir, &argv[2], argc - 2);
 }
