@@ -2,6 +2,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "runner.h"
 #include "watch.h"
 
 void clr_scr();
@@ -15,17 +16,10 @@ typedef struct {
     size_t n_cmd;
 } Context;
 
-void run(char *cmds[]) {
-    pid_t pid = fork();
-    if (pid == 0) {
-        execvp(cmds[0], &cmds[0]);
-        perror("execvp");
-        _exit(127);
-    }
-    if (pid > 0) {
-        int status;
-        waitpid(pid, &status, 0);
-    }
+void cmd_output_callback(char *buffer, long n) {
+    (void)n;
+    printf("%s", buffer);
+    fflush(stdout);
 }
 
 void handle_file_update(Context *ctx) {
@@ -37,7 +31,7 @@ void handle_file_update(Context *ctx) {
         printf("%s ", ctx->cmds[i]);
     printf("\n\n");
 
-    run(ctx->cmds);
+    run_cmd_interactive(ctx->cmds, cmd_output_callback);
     fflush(stdout);
 }
 
