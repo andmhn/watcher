@@ -38,7 +38,7 @@ void run_cmd_interactive(char *cmds[], Output_Handler output_handler) {
 
             // Output to screen
             if (FD_ISSET(master_fd, &read_fds)) {
-                n = read(master_fd, buffer, sizeof(buffer));
+                n = read(master_fd, buffer, sizeof(buffer) - 1);
                 if (n <= 0)
                     break; // Child exited
                 buffer[n] = '\0';
