@@ -1,3 +1,4 @@
 #!/usr/bin/sh
 
-gcc main.c watch.c terminal.c runner.c -Wall -Wextra -g -O1 -fsanitize=address -o watcher
+set -x
+gcc -o watcher main.c watch.c terminal.c runner.c -Wall -Wextra -O1 -g -fsanitize=address
