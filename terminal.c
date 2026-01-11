@@ -5,12 +5,12 @@
 
 static struct termios orig_termios;
 
-void clr_scr() { printf("\033[2J\033[H"); }
+void clr_scr() { (void)!system("clear"); } // silly me
 
 void terminal_restore() {
-    // Leaves Alternate Buffer
-    printf("\033[?1049l\033[?25h");
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+    printf("\033[?25h"); // Show cursor
+    fflush(stdout);
 }
 
 void terminal_setup() {
@@ -21,7 +21,6 @@ void terminal_setup() {
     raw.c_lflag &= ~(ECHO | ICANON);
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 
-    // Enters alternate buffer
-    printf("\033[?1049h\033[?25h\033[H");
+    printf("\033[?25l"); // Hide cursor
     fflush(stdout);
 }
