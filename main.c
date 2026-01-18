@@ -93,22 +93,25 @@ void handle_exit(int sig) {
 }
 
 Context parse_args(int argc, char *argv[]) {
-    int i = 1;
-    while(i < argc) {
-        if(strncmp(argv[i], "--", 2) == 0)
+    argc -= 1; // skip first arg
+    argv = &argv[1];
+    
+    int i = 0;
+    for(; i < argc; i++) {
+        if(strcmp(argv[i], "--") == 0)
             break;
-        i++;
     }
-    if(i == argc) {
+    if(i >= argc - 1) {
+        if(argc == 0) puts("Expected Args!"); else puts("Invalid Args!");
         print_help();
-        handle_exit(1);
+        _exit(1);
     }
 
-    int n_dir = i - 1;
+    int n_dir = i;
     int cmd_i = i + 1;
 
     return (Context) {
-        .dirs  = &argv[1],
+        .dirs  = argv,
         .n_dir = n_dir,
         .cmds  = &argv[cmd_i],
         .n_cmd = argc - cmd_i,
@@ -116,17 +119,11 @@ Context parse_args(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-
-    if (argc < 3) {
-        print_help();
-        return 1;
-    }
+    Context ctx = parse_args(argc, argv);
 
     terminal_setup();
     signal(SIGINT, handle_exit);
     signal(SIGTERM, handle_exit);
-
-    Context ctx = parse_args(argc, argv);
 
     watch_and_run(ctx);
 }
