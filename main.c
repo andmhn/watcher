@@ -27,7 +27,7 @@ void cmd_output_callback(char *buffer, long n) {
 void handle_file_update(Context *ctx) {
     clr_scr();
 
-    printf("watching in  ");
+    printf("watching in ");
     for (size_t i = 0; i < ctx->n_dir; i++)
         printf("%s ", ctx->dirs[i]);
     printf("\n");
@@ -57,17 +57,16 @@ void handle_console_input(Context *ctx) {
     }
 }
 
-void event_handler(enum Event events[], int nevents, void *ctx) {
-    for (int i = 0; i < nevents; i++) {
+void event_handler(enum Event events[], int n_events, void *ctx) {
+    for (int i = 0; i < n_events; i++) {
         switch (events[i]) {
-        case Console_Input: {
+        case Console_Input:
             handle_console_input(ctx);
             break;
-        }
-        case File_Update: {
+
+        case File_Update:
             handle_file_update(ctx);
             break;
-        }
         }
     }
 }
@@ -93,12 +92,11 @@ void handle_exit(int sig) {
     _exit(sig);
 }
 
-Context parse_args(int argc, char*argv[]) {
+Context parse_args(int argc, char *argv[]) {
     int i = 1;
     while(i < argc) {
-        if(strncmp(argv[i], "--", 2) == 0){
+        if(strncmp(argv[i], "--", 2) == 0)
             break;
-        }
         i++;
     }
     if(i == argc) {
@@ -107,13 +105,13 @@ Context parse_args(int argc, char*argv[]) {
     }
 
     int n_dir = i - 1;
-    int n_cmd = i + 1;
+    int cmd_i = i + 1;
 
     return (Context) {
-        .dirs = &argv[1],
+        .dirs  = &argv[1],
         .n_dir = n_dir,
-        .cmds = &argv[n_cmd],
-        .n_cmd = argc - n_cmd,
+        .cmds  = &argv[cmd_i],
+        .n_cmd = argc - cmd_i,
     };
 }
 
