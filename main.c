@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -11,7 +12,8 @@ void terminal_restore();
 void handle_exit(int sig);
 
 typedef struct {
-    char *dir;
+    char **dirs;
+    size_t n_dir;
     char **cmds;
     size_t n_cmd;
 } Context;
@@ -25,7 +27,11 @@ void cmd_output_callback(char *buffer, long n) {
 void handle_file_update(Context *ctx) {
     clr_scr();
 
-    printf("watching in  %s\n", ctx->dir);
+    printf("watching in  ");
+    for (size_t i = 0; i < ctx->n_dir; i++)
+        printf("%s ", ctx->dirs[i]);
+    printf("\n");
+
     printf("running: ");
     for (size_t i = 0; i < ctx->n_cmd; i++)
         printf("%s ", ctx->cmds[i]);
@@ -69,14 +75,14 @@ void event_handler(enum Event events[], int nevents, void *ctx) {
 void watch_and_run(Context ctx) {
     handle_file_update(&ctx); // initial run
     while (1) {
-        watch_init(ctx.dir);
+        watch_init((const char **)ctx.dirs, ctx.n_dir);
         watch_once(event_handler, &ctx);
         watch_close();
     }
 }
 
 void print_help() {
-    puts("\nUSAGE:\twatcher <dir> <cmds...>\n\n");
+    puts("\nUSAGE:\twatcher <dirs..> -- <cmds...>\n\n");
     puts("\tWatch for file changes in directory and run comand\n");
 }
 
@@ -87,6 +93,30 @@ void handle_exit(int sig) {
     _exit(sig);
 }
 
+Context parse_args(int argc, char*argv[]) {
+    int i = 1;
+    while(i < argc) {
+        if(strncmp(argv[i], "--", 2) == 0){
+            break;
+        }
+        i++;
+    }
+    if(i == argc) {
+        print_help();
+        handle_exit(1);
+    }
+
+    int n_dir = i - 1;
+    int n_cmd = i + 1;
+
+    return (Context) {
+        .dirs = &argv[1],
+        .n_dir = n_dir,
+        .cmds = &argv[n_cmd],
+        .n_cmd = argc - n_cmd,
+    };
+}
+
 int main(int argc, char *argv[]) {
 
     if (argc < 3) {
@@ -94,17 +124,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char *dir = argv[1];
-
     terminal_setup();
     signal(SIGINT, handle_exit);
     signal(SIGTERM, handle_exit);
 
-    Context ctx = {
-        .dir = dir,
-        .cmds = &argv[2],
-        .n_cmd = argc - 2,
-    };
+    Context ctx = parse_args(argc, argv);
 
     watch_and_run(ctx);
 }

@@ -18,22 +18,19 @@ static const int debounce_ms = 100;
 static const uint32_t imask = IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVED_TO;
 
 static void add_subdirs(const char *root_path);
+static void add_dir_to_watch(const char* dir);
 
-void watch_init(const char *dir) {
+void watch_init(const char **dirs, size_t n_dir) {
     fd = inotify_init1(IN_CLOEXEC);
     if (fd < 0) {
         perror("inotify_init");
         exit(1);
     }
 
-    int wd = inotify_add_watch(fd, dir, imask);
-
-    if (wd < 0) {
-        fprintf(stderr, "Cannot watch '%s': %s\n", dir, strerror(errno));
-        sleep(1);
-        exit(EXIT_FAILURE);
+    for(size_t  i = 0 ; i < n_dir; i++ ) {
+        add_dir_to_watch(dirs[i]);
+        add_subdirs(dirs[i]);
     }
-    add_subdirs(dir);
 
     /* Prepare for polling. */
 
@@ -83,6 +80,16 @@ void watch_once(EventHandler event_callback, void *userdata) {
 }
 
 void watch_close() { close(fd); }
+
+static void add_dir_to_watch(const char* dir) {
+    int wd = inotify_add_watch(fd, dir, imask);
+
+    if (wd < 0) {
+        fprintf(stderr, "Cannot watch '%s': %s\n", dir, strerror(errno));
+        sleep(1);
+        exit(EXIT_FAILURE);
+    }
+}
 
 static int crawl_callback(const char *fpath, const struct stat *sb, int typeflag,
                           struct FTW *ftwbuf) {
