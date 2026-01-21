@@ -57,5 +57,10 @@ void run_cmd_interactive(char *cmds[], Output_Handler output_handler) {
         close(master_fd);
         int status;
         waitpid(pid, &status, 0);
+
+        if (WIFEXITED(status))
+            printf("\n--------- exited, status %d ---------\n", WEXITSTATUS(status));
+        else if (WIFSIGNALED(status))
+            printf("\n--------- killed by signal %d ---------\n", WTERMSIG(status));
     }
 }
