@@ -95,13 +95,14 @@ void handle_exit(int sig) {
 Context parse_args(int argc, char *argv[]) {
     argc -= 1; // skip first arg
     argv = &argv[1];
-    
+
     int i = 0;
     for(; i < argc; i++) {
         if(strcmp(argv[i], "--") == 0)
             break;
     }
-    if(i >= argc - 1) {
+    bool args_exhausted = i >= argc - 1;
+    if(args_exhausted) {
         if(argc == 0) puts("Expected Args!"); else puts("Invalid Args!");
         print_help();
         _exit(1);
